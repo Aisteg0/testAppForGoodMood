@@ -3,29 +3,30 @@ const tg = window.Telegram?.WebApp;
 if (tg) {
   tg.ready();
   tg.expand();
-  document.body.style.background = tg.themeParams.bg_color || '#1a0a14';
+  document.body.style.background = tg.themeParams.bg_color || '#12121a';
 }
 
-// Floating hearts background
-const heartsContainer = document.getElementById('hearts');
-const heartEmojis = ['💕', '💖', '💗', '❤️', '💘'];
-
-for (let i = 0; i < 12; i++) {
-  const heart = document.createElement('span');
-  heart.className = 'heart-particle';
-  heart.textContent = heartEmojis[Math.floor(Math.random() * heartEmojis.length)];
-  heart.style.left = `${Math.random() * 100}%`;
-  heart.style.animationDuration = `${8 + Math.random() * 12}s`;
-  heart.style.animationDelay = `${Math.random() * 10}s`;
-  heartsContainer.appendChild(heart);
+// Background particles
+const bg = document.getElementById('bgParticles');
+const icons = ['😔', '👟', '✨', '💫'];
+for (let i = 0; i < 10; i++) {
+  const el = document.createElement('span');
+  el.className = 'particle';
+  el.textContent = icons[Math.floor(Math.random() * icons.length)];
+  el.style.left = `${Math.random() * 100}%`;
+  el.style.animationDuration = `${10 + Math.random() * 10}s`;
+  el.style.animationDelay = `${Math.random() * 8}s`;
+  bg.appendChild(el);
 }
 
+const step1 = document.getElementById('step1');
+const step2 = document.getElementById('step2');
+const final = document.getElementById('final');
+const modal = document.getElementById('modal');
 const btnYes = document.getElementById('btnYes');
 const btnNo = document.getElementById('btnNo');
-const btnAgain = document.getElementById('btnAgain');
-const game = document.getElementById('game');
-const result = document.getElementById('result');
-const subtitle = document.getElementById('subtitle');
+const btnOk = document.getElementById('btnOk');
+const hint = document.getElementById('hint');
 
 const ESCAPE_RADIUS = 120;
 const MOVE_SPEED = 1.4;
@@ -35,7 +36,29 @@ let pointerY = 0;
 let noX = 0;
 let noY = 0;
 let animationId = null;
+let escapeActive = false;
 
+function showScreen(screen) {
+  [step1, step2, final].forEach((s) => s.classList.remove('active'));
+  screen.classList.add('active');
+}
+
+function haptic(type) {
+  if (!tg?.HapticFeedback) return;
+  if (type === 'success') tg.HapticFeedback.notificationOccurred('success');
+  else tg.HapticFeedback.impactOccurred('light');
+}
+
+// Step 1
+step1.querySelectorAll('[data-answer]').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    haptic('light');
+    showScreen(step2);
+    startEscape();
+  });
+});
+
+// Escaping "Нет" button
 function getButtonSize() {
   const rect = btnNo.getBoundingClientRect();
   return { width: rect.width, height: rect.height };
@@ -45,19 +68,18 @@ function placeNoButton(x, y) {
   const { width, height } = getButtonSize();
   const maxX = window.innerWidth - width - 16;
   const maxY = window.innerHeight - height - 16;
-
   noX = Math.max(16, Math.min(x, maxX));
   noY = Math.max(16, Math.min(y, maxY));
-
   btnNo.style.left = `${noX}px`;
   btnNo.style.top = `${noY}px`;
 }
 
 function initNoButton() {
   const { width, height } = getButtonSize();
-  const centerX = window.innerWidth / 2 - width / 2;
-  const centerY = window.innerHeight * 0.65;
-  placeNoButton(centerX, centerY);
+  placeNoButton(
+    window.innerWidth / 2 - width / 2,
+    window.innerHeight * 0.68
+  );
 }
 
 function distance(x1, y1, x2, y2) {
@@ -65,25 +87,39 @@ function distance(x1, y1, x2, y2) {
 }
 
 function escapeFromPointer() {
+  if (!escapeActive) return;
   const { width, height } = getButtonSize();
-  const btnCenterX = noX + width / 2;
-  const btnCenterY = noY + height / 2;
-
-  const dist = distance(pointerX, pointerY, btnCenterX, btnCenterY);
+  const cx = noX + width / 2;
+  const cy = noY + height / 2;
+  const dist = distance(pointerX, pointerY, cx, cy);
 
   if (dist < ESCAPE_RADIUS) {
-    const angle = Math.atan2(btnCenterY - pointerY, btnCenterX - pointerX);
+    const angle = Math.atan2(cy - pointerY, cx - pointerX);
     const force = (ESCAPE_RADIUS - dist) / ESCAPE_RADIUS;
-    const moveX = Math.cos(angle) * force * MOVE_SPEED * 18;
-    const moveY = Math.sin(angle) * force * MOVE_SPEED * 18;
-
-    placeNoButton(noX + moveX, noY + moveY);
+    placeNoButton(
+      noX + Math.cos(angle) * force * MOVE_SPEED * 18,
+      noY + Math.sin(angle) * force * MOVE_SPEED * 18
+    );
   }
 }
 
 function gameLoop() {
   escapeFromPointer();
   animationId = requestAnimationFrame(gameLoop);
+}
+
+function startEscape() {
+  escapeActive = true;
+  initNoButton();
+  if (!animationId) animationId = requestAnimationFrame(gameLoop);
+}
+
+function stopEscape() {
+  escapeActive = false;
+  if (animationId) {
+    cancelAnimationFrame(animationId);
+    animationId = null;
+  }
 }
 
 function updatePointer(e) {
@@ -94,80 +130,47 @@ function updatePointer(e) {
 document.addEventListener('mousemove', updatePointer);
 document.addEventListener('touchmove', updatePointer, { passive: true });
 document.addEventListener('touchstart', updatePointer, { passive: true });
+window.addEventListener('resize', () => { if (escapeActive) initNoButton(); });
 
-window.addEventListener('resize', initNoButton);
-
-// Prevent clicking No
 btnNo.addEventListener('click', (e) => {
   e.preventDefault();
   e.stopPropagation();
-  if (tg) tg.HapticFeedback?.impactOccurred('light');
+  haptic('light');
 });
 
 btnNo.addEventListener('mousedown', (e) => e.preventDefault());
 btnNo.addEventListener('touchstart', (e) => e.preventDefault());
 
-// Taunt messages when trying to catch No
 const taunts = [
-  'Нет не получится! 😏',
-  'Попробуй ещё...',
-  'Упс, промахнулся!',
-  'Кнопка «Нет» в отпуске 🏖',
-  'Только «Да» работает 💕',
+  'Не-а 😏',
+  'Упс, мимо!',
+  'Нет не поймаешь',
+  'Только «Да» работает',
 ];
 
 let tauntTimer = null;
 document.addEventListener('mousemove', () => {
+  if (!escapeActive) return;
   const { width, height } = getButtonSize();
-  const btnCenterX = noX + width / 2;
-  const btnCenterY = noY + height / 2;
-  const dist = distance(pointerX, pointerY, btnCenterX, btnCenterY);
-
+  const dist = distance(pointerX, pointerY, noX + width / 2, noY + height / 2);
   if (dist < ESCAPE_RADIUS && !tauntTimer) {
     tauntTimer = setTimeout(() => {
-      subtitle.textContent = taunts[Math.floor(Math.random() * taunts.length)];
+      hint.textContent = taunts[Math.floor(Math.random() * taunts.length)];
       tauntTimer = null;
-    }, 800);
+    }, 600);
   }
 });
 
-function spawnConfetti() {
-  const colors = ['#ff6b9d', '#ff4081', '#ffd700', '#ff69b4', '#fff'];
-  for (let i = 0; i < 40; i++) {
-    const piece = document.createElement('div');
-    piece.className = 'confetti';
-    piece.style.left = `${Math.random() * 100}vw`;
-    piece.style.top = `${-10 - Math.random() * 20}px`;
-    piece.style.background = colors[Math.floor(Math.random() * colors.length)];
-    piece.style.animationDuration = `${1.5 + Math.random() * 2}s`;
-    piece.style.animationDelay = `${Math.random() * 0.5}s`;
-    document.body.appendChild(piece);
-    setTimeout(() => piece.remove(), 3500);
-  }
-}
+// Step 2 — Да
+btnYes.addEventListener('click', () => {
+  haptic('light');
+  stopEscape();
+  modal.classList.remove('hidden');
+});
 
-function showResult() {
-  if (tg) {
-    tg.HapticFeedback?.notificationOccurred('success');
-  }
-  spawnConfetti();
-  game.style.display = 'none';
-  result.classList.remove('hidden');
-  btnNo.style.display = 'none';
-  cancelAnimationFrame(animationId);
-}
-
-function resetGame() {
-  result.classList.add('hidden');
-  game.style.display = 'flex';
-  btnNo.style.display = 'block';
-  subtitle.textContent = 'Выбери ответ честно!';
-  initNoButton();
-  animationId = requestAnimationFrame(gameLoop);
-}
-
-btnYes.addEventListener('click', showResult);
-btnAgain.addEventListener('click', resetGame);
-
-initNoButton();
-animationId = requestAnimationFrame(gameLoop);
+// Modal — Окей
+btnOk.addEventListener('click', () => {
+  haptic('success');
+  modal.classList.add('hidden');
+  showScreen(final);
+});

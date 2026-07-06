@@ -3,35 +3,54 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Да или Нет?</title>
+  <title>Good Mood</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div class="app">
-  <div class="hearts" id="hearts"></div>
+    <div class="bg-particles" id="bgParticles"></div>
 
-  <header class="header">
-    <span class="emoji">💕</span>
-    <h1>У тебя есть важный вопрос...</h1>
-    <p class="subtitle" id="subtitle">Выбери ответ честно!</p>
-  </header>
+    <!-- Шаг 1 -->
+    <section class="screen active" id="step1">
+      <div class="card">
+        <span class="emoji">😔</span>
+        <h1>Чего ты без настроения?</h1>
+        <div class="buttons">
+          <button class="btn btn-primary" data-answer="no-job">Нет работы</button>
+          <button class="btn btn-secondary" data-answer="just">Просто</button>
+        </div>
+      </div>
+    </section>
 
-  <main class="game" id="game">
-    <div class="buttons">
-      <button class="btn btn-yes" id="btnYes">Да! 💖</button>
+    <!-- Шаг 2 -->
+    <section class="screen" id="step2">
+      <div class="card">
+        <span class="emoji">👟</span>
+        <h1>Хочешь новые кроссы?</h1>
+        <p class="hint" id="hint"></p>
+        <div class="buttons">
+          <button class="btn btn-primary" id="btnYes">Да</button>
+        </div>
+      </div>
       <button class="btn btn-no" id="btnNo">Нет</button>
-    </div>
-  </main>
+    </section>
 
-  <section class="result hidden" id="result">
-    <div class="result-card">
-      <span class="result-emoji">🎉</span>
-      <h2>Я так и знал(а)!</h2>
-      <p>Ты выбрал(а) правильный ответ 💕</p>
-      <button class="btn btn-yes" id="btnAgain">Ещё раз?</button>
+    <!-- Модалка -->
+    <div class="modal hidden" id="modal">
+      <div class="modal-card">
+        <p class="modal-text">ахахаха наебал</p>
+        <button class="btn btn-primary" id="btnOk">Окей</button>
+      </div>
     </div>
-  </section>
+
+    <!-- Финал -->
+    <section class="screen" id="final">
+      <div class="card">
+        <span class="emoji">😊</span>
+        <p class="final-text">с улыбкой на лице тебе идет больше)</p>
+      </div>
+    </section>
   </div>
 
   <script src="app.js"></script>
